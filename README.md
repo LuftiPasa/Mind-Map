@@ -6,7 +6,7 @@ I developed my own mind map project which is pretty useful for doing what I want
 <br /><strong>Zoom In/Out</strong>(scroll up/down),
 <br /><strong>Changing the Theme</strong>(placed in "Settings" tab),
 <br /><strong>Save</strong> (Ctrl+S),<br /><strong>Save As</strong> (Ctrl+Shift+S),<br /><strong>Export As PNG</strong> (no shortcut),<br /><strong>Import</strong> (Ctrl+I or shift + right click),
-<blockquote><em>You can also import files of this program</em></blockquote>
+<blockquote><em>Shift+double left click to open imported files. Also you can import files of this program</em></blockquote>
 <br /><strong>Creating A Box</strong>(right click),
 <br /><strong>Snapping Mode</strong>(S "on/off" or placed in "Settings" tab)
 <br /><strong>Resizing Mode</strong>(R "on/off" or placed in "Settings" tab),
