@@ -9,10 +9,11 @@ import subprocess
 os.environ["QT_QUICK_BACKEND"] = "software"
 
 try:
+    # QMessageBox eklendi
     from PyQt6.QtWidgets import (QApplication, QMainWindow, QGraphicsView, QGraphicsScene, 
                                  QGraphicsItem, QGraphicsLineItem, QGraphicsTextItem, 
                                  QGraphicsPathItem, QColorDialog, QDialog, QVBoxLayout, 
-                                 QLabel, QTextEdit, QPushButton, QComboBox, QFileDialog, QHBoxLayout, QRubberBand)
+                                 QLabel, QTextEdit, QPushButton, QComboBox, QFileDialog, QHBoxLayout, QRubberBand, QMessageBox)
     from PyQt6.QtCore import Qt, QPointF, QRectF, QLineF, QPoint, QRect, QSize, QUrl
     from PyQt6.QtGui import QColor, QPen, QBrush, QPainter, QFont, QPainterPath, QTextOption, QPolygonF, QAction, QKeySequence, QImage, QDesktopServices, QPixmap, QFontMetrics
 except ImportError:
@@ -112,7 +113,7 @@ class MindBlock(QGraphicsPathItem):
         self.text_item.setPlainText(display_text)
         self.text_item.setDefaultTextColor(self.text_color)
         
-        # --- AUTO-RESIZE: METİN UZUNLUĞUNA GÖRE GENİŞLE ---
+        # Auto-Resize Logic
         fm = QFontMetrics(self.text_item.font())
         text_width = fm.horizontalAdvance(display_text)
         
@@ -244,9 +245,7 @@ class MindBlock(QGraphicsPathItem):
         def pick_t(): nonlocal temp_text_c; c = QColorDialog.getColor(temp_text_c, d); (temp_text_c := c) if c.isValid() else None
         b1.clicked.connect(pick_b); b2.clicked.connect(pick_t)
         
-        # --- BUTON DÜZELTMESİ BURADA ---
         del_btn = QPushButton("🗑️ DELETE BLOCK"); del_btn.setStyleSheet("background: #f44336; color: white; font-weight: bold; padding: 10px;")
-        # Sadece self'i (açık olan bloğu) siler, auto-heal zaten delete_block içinde
         del_btn.clicked.connect(lambda: [self.scene_mgr.delete_block(self), d.accept()])
         layout.addWidget(del_btn)
         
@@ -333,7 +332,7 @@ class MindMapScene(QGraphicsScene):
         super().mousePressEvent(e)
 
     def delete_block(self, b):
-        # BAĞLANTI ONARMA (AUTO-HEAL)
+        # AUTO-HEAL
         incoming_nodes = []
         outgoing_nodes = []
         for conn in b.connections:
@@ -380,7 +379,7 @@ class MindMapScene(QGraphicsScene):
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        super().__init__(); self.setWindowTitle("Pro Mind Map v92 - Perfect Edition")
+        super().__init__(); self.setWindowTitle("Pro Mind Map v95 - Final Safe")
         self.snap_to_grid = True; self.is_global_resize_mode = False; self.current_file = None
         self.scene = MindMapScene(self); self.scene.setBackgroundBrush(QBrush(QColor("#2b2b2b")))
         self.view = CustomView(self.scene); self.setCentralWidget(self.view)
@@ -389,6 +388,7 @@ class MainWindow(QMainWindow):
 
     def init_menu(self):
         mb = self.menuBar(); fm = mb.addMenu("File")
+        fm.addAction(QAction("New Map", self, shortcut="Ctrl+N", triggered=self.new_map))
         fm.addAction(QAction("Open File", self, shortcut="Ctrl+O", triggered=self.load))
         fm.addAction(QAction("Import...", self, shortcut="Ctrl+I", triggered=self.import_from_menu))
         fm.addAction(QAction("Save", self, shortcut="Ctrl+S", triggered=self.save))
@@ -399,6 +399,11 @@ class MainWindow(QMainWindow):
         self.snap_act.triggered.connect(lambda: setattr(self, 'snap_to_grid', self.snap_act.isChecked())); am.addAction(self.snap_act)
         self.res_act = QAction("Resize [R]", self, checkable=True, shortcut="R"); self.res_act.triggered.connect(self.toggle_resize); am.addAction(self.res_act)
         tm = am.addMenu("Theme"); tm.addAction("Dark", lambda: self.set_bg("#2b2b2b")); tm.addAction("Light", lambda: self.set_bg("#f0f0f0")); tm.addAction("Custom...", self.pick_bg)
+
+    def new_map(self):
+        reply = QMessageBox.question(self, 'New Map', "Are you sure you want to create a new map? Unsaved changes will be lost.", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.scene.clear(); self.current_file = None; self.set_bg("#2b2b2b")
 
     def import_from_menu(self):
         filters = "All Supported (*.pdf *.txt *.docx *.xlsx *.pptx *.map *.mp3 *.wav *.mp4 *.py *.html *.css *.js *.json *.zip *.rar);;All Files (*.*)"
@@ -417,7 +422,8 @@ class MainWindow(QMainWindow):
         r = self.scene.itemsBoundingRect().adjusted(-50,-50,50,50)
         img = QImage(r.size().toSize(), QImage.Format.Format_ARGB32); img.fill(self.scene.backgroundBrush().color())
         p = QPainter(img); p.setRenderHint(QPainter.RenderHint.Antialiasing); self.scene.render(p, QRectF(img.rect()), r); p.end()
-        path, _ = QFileDialog.getSaveFileName(self, "Save", "", "PNG Files (*.png)"); (img.save(path[0]) if path[0] else None)
+        path, _ = QFileDialog.getSaveFileName(self, "Save", "", "PNG Files (*.png)")
+        if path: img.save(path)
     def toggle_resize(self):
         self.is_global_resize_mode = self.res_act.isChecked()
         self.view.setCursor(Qt.CursorShape.SizeFDiagCursor if self.is_global_resize_mode else Qt.CursorShape.ArrowCursor); self.scene.update()
@@ -427,7 +433,7 @@ class MainWindow(QMainWindow):
     def save(self): self.do_save(self.current_file) if self.current_file else self.save_as()
     def save_as(self):
         p, _ = QFileDialog.getSaveFileName(self, "Save As", "", "Map Files (*.map)")
-        if p[0]: self.current_file = p[0]; self.do_save(p[0])
+        if p: self.current_file = p; self.do_save(p)
     def do_save(self, path):
         data = {"bg": self.scene.backgroundBrush().color().name(), "blocks": [], "lines": []}
         for b in [i for i in self.scene.items() if isinstance(i, MindBlock)]:
@@ -440,7 +446,7 @@ class MainWindow(QMainWindow):
         with open(path, "w") as f: json.dump(data, f)
     def load(self):
         p, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Map Files (*.map)")
-        if p[0]: self.load_from_path(p[0])
+        if p: self.load_from_path(p)
 
     def load_from_path(self, path):
         self.scene.clear(); self.current_file = path
